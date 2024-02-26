@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kakao API Example</title>
+</head>
+<body>
+    <input type="text" id="addressInput" placeholder="주소를 입력하세요">
+    <button id="searchButton">검색</button>
+    
+    <div id="result"></div>
+
+    <script>
+        document.getElementById('searchButton').addEventListener('click', function() {
+            var address = document.getElementById('addressInput').value;
+            fetch('/get_coordinates', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({address: address})
+            })
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById('result').innerText = `위도: ${data.coordinates[0]}, 경도: ${data.coordinates[1]}`;
+            })
+            .catch(error => console.error('에러:', error));
+        });
+    </script>
+</body>
+</html>

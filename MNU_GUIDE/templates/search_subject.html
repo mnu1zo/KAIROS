@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>과목명 검색</title>
+    <!-- 모달 스타일 -->
+    <style>
+        /* 모달 스타일 */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0, 0, 0, 0.4);
+        }
+        
+        .modal-content {
+            background-color: #fefefe;
+            margin: auto;
+            padding: 20px;
+            border: 1px solid #888;
+            width: 80%;
+            max-width: 400px; /* 최대 너비 설정 */
+            text-align: center; /* 가운데 정렬 */
+        }
+        
+        .close:hover,
+        .close:focus {
+            color: black;
+            text-decoration: none;
+            cursor: pointer;
+        }
+
+        /* 선택 가능한 버튼 스타일 */
+        .selectable-button {
+            background-color: #0056b3; /* 파란색 */
+            border: none;
+            color: white; /* 흰색 텍스트 */
+            padding: 10px 20px;
+            text-align: center;
+            text-decoration: none;
+            display: inline-block;
+            font-size: 16px;
+            margin: 4px 2px;
+            cursor: pointer;
+            border-radius: 8px;
+            width: calc(100% - 22px); /* 폭 계산 */
+            max-width: 376px; /* 최대 너비 설정 */
+            font-family: Arial, sans-serif; /* 과목명 입력란과 같은 글꼴 */
+        }
+
+        /* 가운데 정렬 */
+        #search-form {
+            text-align: center;
+        }
+
+        /* 타이틀 가운데 정렬 */
+        h2 {
+            margin-top: 15%;
+            font-family: "Arial", sans-serif;
+            text-align: center;
+        }
+
+        /* 검색 버튼 스타일 */
+        input[type="submit"] {
+            background-color: #0056b3;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            font-family: Arial, sans-serif; /* 과목명 입력란과 같은 글꼴 */
+            width: 376px; /* 버튼 전체 폭 사용 */
+            margin-top: 10px; /* 위 여백 추가 */
+        }
+
+        /* 과목명 입력 칸 스타일 */
+        #subject {
+            width: calc(100% - 22px); /* 폭 계산 */
+            max-width: 376px; /* 최대 너비 설정 */
+            padding: 10px;
+            margin-bottom: 10px;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            box-sizing: border-box;
+            font-family: Arial, sans-serif; /* 글꼴 설정 */
+            font-size: 16px; /* 폰트 크기 설정 */
+        }
+        #go-back {
+            display: block; /* 블록 요소로 설정하여 가로폭 전체 사용 */
+            margin: 20px auto; /* 위아래 여백을 20px, 좌우 여백을 자동으로 설정하여 가운데 정렬 */
+        }
+    </style>
+</head>
+<body>
+
+<h2>과목명 검색</h2>
+<form id="search-form">
+    <input type="text" id="subject" name="subject" placeholder="과목명을 입력하세요"><br>
+    <input type="submit" value="검색">
+</form>
+
+<!-- 모달 -->
+<div id="myModal" class="modal">
+    <div class="modal-content">
+        <span class="close">&times;</span>
+        <div id="matching-subjects"></div>
+    </div>
+</div>
+
+<!-- Axios CDN -->
+<script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+
+<!-- JavaScript -->
+<script>
+    // 모달 열기
+    function openModal() {
+        document.getElementById('myModal').style.display = 'block';
+    }
+
+    // 모달 닫기
+    function closeModal() {
+        document.getElementById('myModal').style.display = 'none';
+    }
+
+    // 수강신청
+    function enrollCourse(subjectName) {
+        let subject = {
+            "subject_name": subjectName,
+          };
+        // 서버로 과목명과 사용자 ID 전송
+        axios.post('http://orion.mokpo.ac.kr:8411/enroll_course', subject)
+        .then(response => {
+            console.log(response.data.message);
+            closeModal(); // 모달 닫기
+        })
+        .catch(error => console.error('Error:', error));
+    }
+
+    // 검색 결과 표시
+    function displayMatchingSubjects() {
+        axios.post('/search_subject', new FormData(document.getElementById('search-form')), {
+            headers: {
+                'Content-Type': 'multipart/form-data', // 폼 데이터 전송
+                'X-Requested-With': 'XMLHttpRequest' // AJAX 요청임을 나타내는 헤더
+            }
+        })
+        .then(response => {
+            const matchingSubjectsDiv = document.getElementById('matching-subjects');
+            matchingSubjectsDiv.innerHTML = ''; // 이전에 표시된 내용을 지움
+
+            // 받은 데이터를 화면에 추가
+            response.data.matching_subjects.forEach(subject => {
+                const button = document.createElement('button');
+                button.textContent = subject;
+                button.className = 'selectable-button';
+                button.onclick = function() {
+                    enrollCourse(subject); // 해당 과목을 수강신청
+                };
+                matchingSubjectsDiv.appendChild(button);
+            });
+
+            // 모달 열기
+            openModal();
+        })
+        .catch(error => console.error('Error:', error));
+    }
+
+    // 검색 버튼 클릭 이벤트 핸들러
+    document.getElementById('search-form').addEventListener('submit', function(event) {
+        event.preventDefault(); // 폼 전송 방지
+        displayMatchingSubjects(); // 서버로부터 데이터를 가져와서 표시
+    });
+
+    // 모달 닫기 버튼 클릭 이벤트 핸들러
+    document.querySelector('.close').addEventListener('click', closeModal);
+
+    // 모달 외부를 클릭하여 모달 닫기
+    window.addEventListener('click', function(event) {
+        const modal = document.getElementById('myModal');
+        if (event.target === modal) {
+            closeModal();
+        }
+    });
+    
+</script>
+<button id="go-back" class="selectable-button">홈으로 가기</button>
+<script>
+    // 홈으로 가는 버튼 클릭 이벤트 핸들러
+    document.getElementById('go-back').addEventListener('click', function() {
+        window.history.back(); // 브라우저의 이전 페이지로 이동
+    });
+</script>
+</body>
+</html>

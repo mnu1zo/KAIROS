@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>MNU 길잡이</title>
+</head>
+<body>
+<div id="map" style="width:100%;height:500px;"></div>
+<button id="addScheduleButton" style="position:absolute; top:10px; left:10px; z-index:1; padding: 10px 20px; font-size: 16px;color: white; background-color: #0056b3;">시간표 추가</button>
+<script type="text/javascript" src="//dapi.kakao.com/v2/maps/sdk.js?appkey=cea85fd7f36a979c619615a519f9ab45"></script>
+<script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+<script>
+axios.get('http://orion.mokpo.ac.kr:8411/user_table')
+.then(response => {
+    var data = response.data;
+    var selectedMarker = null; // 클릭한 마커를 담을 변수
+    var overlays = {}; // 중복된 위치에 대한 오버레이를 관리하는 객체
+    
+    // 마커 및 관련 변수 및 함수 정의
+    var MARKER_WIDTH = 33,
+        MARKER_HEIGHT = 36,
+        OFFSET_X = 12,
+        OFFSET_Y = MARKER_HEIGHT,
+        OVER_MARKER_WIDTH = 40,
+        OVER_MARKER_HEIGHT = 42,
+        OVER_OFFSET_X = 13,
+        OVER_OFFSET_Y = OVER_MARKER_HEIGHT,
+        SPRITE_MARKER_URL = 'https://t1.daumcdn.net/localimg/localimages/07/mapapidoc/markers_sprites2.png',
+        SPRITE_WIDTH = 126,
+        SPRITE_HEIGHT = 146,
+        SPRITE_GAP = 10;
+
+    var markerSize = new kakao.maps.Size(MARKER_WIDTH, MARKER_HEIGHT),
+        markerOffset = new kakao.maps.Point(OFFSET_X, OFFSET_Y),
+        overMarkerSize = new kakao.maps.Size(OVER_MARKER_WIDTH, OVER_MARKER_HEIGHT),
+        overMarkerOffset = new kakao.maps.Point(OVER_OFFSET_X, OVER_OFFSET_Y),
+        spriteImageSize = new kakao.maps.Size(SPRITE_WIDTH, SPRITE_HEIGHT);
+
+    var mapContainer = document.getElementById('map'),
+        mapOption = { 
+            center: new kakao.maps.LatLng(34.91279435412841, 126.43794100336358),
+            level: 4
+        };
+
+    var map = new kakao.maps.Map(mapContainer, mapOption);
+    var markers = {}; // 중복된 위치를 확인하기 위한 객체
+
+    // 서버로부터 받은 데이터를 기반으로 마커를 생성합니다
+    for (var i = 0; i < data.length; i++) {
+        var position = new kakao.maps.LatLng(parseFloat(data[i][1]), parseFloat(data[i][2]));
+        var key = data[i][1] + ',' + data[i][2]; // 중복을 확인하기 위한 키값
+
+        // 중복된 위치에 마커가 없는 경우에만 마커를 생성합니다
+        if (!overlays[key]) {
+            var normalImage = createMarkerImage(markerSize, markerOffset),
+                overImage = createMarkerImage(overMarkerSize, overMarkerOffset),
+                clickImage = createMarkerImage(markerSize, markerOffset);
+
+            var marker = new kakao.maps.Marker({
+                map: map,
+                position: position,
+                image: normalImage
+            });
+
+            marker.normalImage = normalImage;
+
+            kakao.maps.event.addListener(marker, 'mouseover', function() {
+                if (!selectedMarker || selectedMarker !== marker) {
+                    marker.setImage(overImage);
+                }
+            });
+
+            kakao.maps.event.addListener(marker, 'mouseout', function() {
+                if (!selectedMarker || selectedMarker !== marker) {
+                    marker.setImage(normalImage);
+                }
+            });
+
+            kakao.maps.event.addListener(marker, 'click', function() {
+                if (!selectedMarker || selectedMarker !== marker) {
+                    !!selectedMarker && selectedMarker.setImage(selectedMarker.normalImage);
+                    marker.setImage(clickImage);
+                }
+                selectedMarker = marker;
+            });
+
+            // 마커를 중복 확인 객체에 추가합니다
+            overlays[key] = {
+                marker: marker,
+                course_id: data[i][0]
+            };
+            // 중복된 위치가 없는 경우에도 오버레이를 생성합니다
+            var overlayContent = '<div style="padding:5px;">Course ID: ' + data[i][0] + '<br>Latitude: ' + data[i][1] + '<br>Longitude: ' + data[i][2] + '</div>';
+            var overlay = new kakao.maps.CustomOverlay({
+                content: overlayContent,
+                map: map,
+                position: position
+            });
+        }
+    }
+
+    function createMarkerImage(markerSize, offset, spriteOrigin) {
+        var markerImage = new kakao.maps.MarkerImage(
+            SPRITE_MARKER_URL,
+            markerSize,
+            {
+                offset: offset,
+                spriteOrigin: spriteOrigin,
+                spriteSize: spriteImageSize
+            }
+        );
+        return markerImage;
+    }
+
+    // 중복된 위치에 대한 오버레이를 표시합니다
+    for (var key in overlays) {
+        if (overlays.hasOwnProperty(key)) {
+            var overlayData = overlays[key];
+            var content = 'Course ID: ' + overlayData.course_id;
+            var overlay = new kakao.maps.CustomOverlay({
+                content: content,
+                position: overlayData.marker.getPosition(),
+                yAnchor: 1
+            });
+            overlay.setMap(map);
+            overlays[key].overlay = overlay;
+        }
+    }
+})
+.catch(function(error) {
+    console.error('Error:', error);
+});
+
+document.getElementById('addScheduleButton').addEventListener('click', function() {
+    window.location.href = 'search_subject';
+});
+</script>
+</body>
+</html>

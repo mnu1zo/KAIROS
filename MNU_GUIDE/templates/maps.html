@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>여러개 마커에 이벤트 등록하기</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+        body, html {
+            height: 100%;
+            margin: 0;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+        #container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+        #map {
+            width: 100%;
+            height: 50%;
+            position: relative;
+            margin-top: 35px; /* 수정: 상단에 10px 여백 추가 */
+        }
+        #timetable {
+            width: 100%;
+            height: 50%;
+            overflow-y: auto;
+            box-sizing: border-box;
+            padding: 10px;
+        }
+        #searchBox {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            z-index: 2;
+            background-color: white;
+            padding: 10px;
+            border-radius: 5px;
+        }
+        .timetable-row {
+            display: flex;
+            border-bottom: 1px solid #ddd;
+        }
+        .timetable-cell {
+            width: calc(100% / 6);
+            height: 60px;
+            box-sizing: border-box;
+            border-right: 1px solid #ddd;
+            text-align: center;
+            line-height: 60px;
+            cursor: pointer;
+        }
+
+        @media (max-width: 767px) {
+            #map, #timetable {
+                height: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="container">
+        <div id="map">
+            <div id="searchBox">
+                <form onsubmit="searchByKeyword(); return false;">
+                    키워드 : <input type="text" id="keyword" size="15">
+                    <button type="submit">검색</button>
+                </form>
+            </div>
+        </div>
+        <div id="timetable"></div>
+    </div>
+
+    <script type="text/javascript" src="//dapi.kakao.com/v2/maps/sdk.js?appkey=cea85fd7f36a979c619615a519f9ab45"></script>
+    <script>
+        var mapContainer = document.getElementById('map'),
+            mapOption = {
+                center: new kakao.maps.LatLng(34.908907, 126.4354782),
+                level: 3
+            };
+
+        var map = new kakao.maps.Map(mapContainer, mapOption);
+
+        var positions = [
+        {
+            content: '<div>70주년기념관 A70</div>',
+            latlng: new kakao.maps.LatLng(34.9078030216231, 126.433587326864)
+        },
+        {
+            content: '<div>공과대학1호관 B18</div>',
+            latlng: new kakao.maps.LatLng(34.9124799944909 , 126.43720999851924 )
+        },
+        {
+            content: '<div>공과대학2호관 B19</div>',
+            latlng: new kakao.maps.LatLng(34.91282613775189 , 126.43653193396814 )
+        },
+        {
+            content: '<div>공과대학3호관 B20</div>',
+            latlng: new kakao.maps.LatLng(34.91339507027162 , 126.43724752367916 )
+        },
+        {
+            content: '<div>공과대학4호관 B21</div>',
+            latlng: new kakao.maps.LatLng(34.91279435412841 , 126.43794100336358 )
+        },
+        {
+            content: '<div>공과대학5호관 B26</div>',
+            latlng: new kakao.maps.LatLng(34.91453167401232, 126.43938455011177 )
+        },
+        {
+            content: '<div>학생회관 A14</div>',
+            latlng: new kakao.maps.LatLng(34.9098187875771, 126.435778325092)
+        },
+        {
+            content: '<div>학생생활관-햇귀관 C35</div>',
+            latlng: new kakao.maps.LatLng(34.91037100319879 , 126.4401897330045 )
+        },
+        {
+            content: '<div>학생생활관-한울관 C36</div>',
+            latlng: new kakao.maps.LatLng(34.91034698492682 , 126.44084642917336 )
+        },
+        {
+            content: '<div>학생생활관-마루ㆍ다솜관 C37</div>',
+            latlng: new kakao.maps.LatLng(34.909191842099126 , 126.44054788313149 )
+        },
+        {
+            content: '<div>학생생활관-다래관 C34</div>',
+            latlng: new kakao.maps.LatLng(34.90965979044758 , 126.44038057687158 )
+        },
+        {
+            content: '<div>학생생활관-관리동 C32</div>',
+            latlng: new kakao.maps.LatLng(34.90998855084631 , 126.43934978195419 )
+        },
+        {
+            content: '<div>학생생활관-가람관 C33</div>',
+            latlng: new kakao.maps.LatLng(34.90946717869752 , 126.4396597051359 )
+        },
+        {
+            content: '<div>학군단 A03</div>',
+            latlng: new kakao.maps.LatLng(34.9058036419332, 126.432982855902)
+        },
+        {
+            content: '<div>플라자60 A60</div>',
+            latlng: new kakao.maps.LatLng(34.9099258119967, 126.434563013186)
+        },
+        {
+            content: '<div>체육관 A04</div>',
+            latlng: new kakao.maps.LatLng(34.9070155612117, 126.433855337186)
+        },
+        {
+            content: '<div>박물관 A05</div>',
+            latlng: new kakao.maps.LatLng(34.90742970033871, 126.43471689887087)
+        },
+        {
+            content: '<div>창조관 A38</div>',
+            latlng: new kakao.maps.LatLng(34.9056522629993, 126.432414933803)
+        },
+        {
+            content: '<div>중앙도서관 A09</div>',
+            latlng: new kakao.maps.LatLng(34.9089069982454, 126.435478186229)
+        },
+        {
+            content: '<div>종합운동장 A02</div>',
+            latlng: new kakao.maps.LatLng(34.9067461547637, 126.432139333818)
+        },
+        {
+            content: '<div>정보종합센터 A10</div>',
+            latlng: new kakao.maps.LatLng(34.9090840904094, 126.434793096067)
+        },
+        {
+            content: '<div>자연과학대학2호관 C31</div>',
+            latlng: new kakao.maps.LatLng(34.91001970407617 , 126.43828817926051 )
+        },
+        {
+            content: '<div>자연과학대학1호관 C30</div>',
+            latlng: new kakao.maps.LatLng(34.91023071328766 , 126.43713781088755 )
+        },
+        {
+            content: '<div>인문대학 B15</div>',
+            latlng: new kakao.maps.LatLng(34.910943471384854 , 126.43533840976107 )
+        },
+        {
+            content: '<div>약학관 C38</div>',
+            latlng: new kakao.maps.LatLng(34.90969273763109 , 126.43775424184454 )
+        },
+        {
+            content: '<div>스포츠센터 B25</div>',
+            latlng: new kakao.maps.LatLng(34.9149551682578, 126.43837493047967 )
+        },
+        {
+            content: '<div>생활과학관 B23</div>',
+            latlng: new kakao.maps.LatLng(34.91347700024979 , 126.4383959409508 )
+        },
+        {
+            content: '<div>사회과학대학/경영대학 A08</div>',
+            latlng: new kakao.maps.LatLng(34.9081168042668, 126.436129168164)
+        },
+        {
+            content: '<div>대외협력관 B24</div>',
+            latlng: new kakao.maps.LatLng(34.914224263302295 , 126.43820482507203 )
+        },
+        {
+            content: '<div>교수회관 B17</div>',
+            latlng: new kakao.maps.LatLng(34.912032040670105 , 126.43585619312606 )
+        },
+        {
+            content: '<div>교수아파트 B22</div>',
+            latlng: new kakao.maps.LatLng(34.91371812873781 , 126.43596502728411 )
+        },
+        {
+            content: '<div>공동실험실습관 B16</div>',
+            latlng: new kakao.maps.LatLng(34.91172263305271 , 126.43522365069845 )
+        }
+    ];
+
+        var markers = [];
+        var currentInfowindow = null;
+
+        for (var i = 0; i < positions.length; i++) {
+            var marker = new kakao.maps.Marker({
+                map: map,
+                position: positions[i].latlng
+            });
+
+            marker.content = positions[i].content;
+
+            var infowindow = new kakao.maps.InfoWindow({
+                content: positions[i].content
+            });
+
+            kakao.maps.event.addListener(marker, 'click', makeClickListener(map, marker, infowindow));
+            markers.push(marker);
+        }
+
+        function makeClickListener(map, marker, infowindow) {
+            return function () {
+                if (currentInfowindow) {
+                    currentInfowindow.close();
+                }
+                infowindow.open(map, marker);
+                currentInfowindow = infowindow;
+            };
+        }
+
+        function searchByKeyword() {
+            var keyword = document.getElementById('keyword').value;
+            for (var i = 0; i < markers.length; i++) {
+                if (markers[i].content.includes(keyword)) {
+                    markers[i].setMap(map);
+                } else {
+                    markers[i].setMap(null);
+                }
+            }
+        }
+        // 시간표 클릭 시 해당 칸의 건물 위치 내용으로 마커 검색
+        var timetableCells = document.querySelectorAll('.timetable-cell');
+        timetableCells.forEach(function(cell, index) {
+            cell.addEventListener('click', function() {
+                var rowIndex = Math.floor(index / 6) + 1; // 헤더 행을 제외하고 계산
+                var columnIndex = index % 6;
+
+                // 첫 번째 행은 시간 정보이므로 무시
+                if (rowIndex > 0) {
+                    var keyword = timetableData[rowIndex][columnIndex];
+                    searchByKeywordWithHighlight(keyword);
+                }
+            });
+        });
+
+        // 시간표 데이터
+        var timetableData = [
+            ["", "Mon", "Tue", "Wed", "Thu", "Fri"],
+            ["09:00", "", "", "", "", ""],
+            ["10:00", "", "", "", "", ""],
+            ["11:00", "", "", "", "", ""],
+            ["12:00", "", "", "", "", ""],
+            ["13:00", "", "", "", "", ""],
+            ["14:00", "", "", "", "", ""],
+            ["15:00", "", "", "", "", ""],
+            ["16:00", "", "", "", "", ""],
+            ["17:00", "", "", "", "", ""],
+            ["18:00", "", "", "", "", ""]
+        ];
+
+        // 시간표 생성
+        var timetableContainer = document.getElementById('timetable');
+        for (var i = 0; i < timetableData.length; i++) {
+            var row = document.createElement('div');
+            row.className = 'timetable-row';
+            for (var j = 0; j < timetableData[i].length; j++) {
+                var cell = document.createElement('div');
+                cell.className = 'timetable-cell';
+                cell.textContent = timetableData[i][j];
+                row.appendChild(cell);
+            }
+            timetableContainer.appendChild(row);
+        }
+
+        // 키워드 검색 후 해당 칸 하이라이트 효과 추가
+        function searchByKeywordWithHighlight(keyword) {
+            for (var i = 0; i < markers.length; i++) {
+                if (markers[i].content.includes(keyword)) {
+                    markers[i].setMap(map);
+                    highlightMarker(markers[i]);
+                } else {
+                    markers[i].setMap(null);
+                }
+            }
+        }
+
+        // 마커 하이라이트 효과 추가
+        function highlightMarker(marker) {
+            marker.setAnimation(kakao.maps.Animation.BOUNCE);
+            setTimeout(function() {
+                marker.setAnimation(null);
+            }, 1500); // 1.5초 동안 BOUNCE 효과 유지
+        }
+    </script>
+</body>
+</html>
